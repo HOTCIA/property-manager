@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>不動産物件管理システム</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f9f9f9;
+      padding: 1em;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+    .tab-button {
+      padding: 10px 20px;
+      background: #f1f1f1;
+      border: none;
+      cursor: pointer;
+      margin-right: 5px;
+      border-radius: 5px 5px 0 0;
+    }
+    .tab-button.active {
+      background: #4CAF50;
+      color: white;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .search-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .search-form input, .search-form select {
+      flex: 1;
+      min-width: 150px;
+    }
+    .actions {
+      margin-bottom: 20px;
+    }
+    .status-button {
+      margin-right: 5px;
+    }
+    .loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .spinner {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 2s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error {
+      background-color: #ffdddd;
+      color: #f44336;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    .success {
+      background-color: #ddffdd;
+      color: #4CAF50;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    .pdf-preview {
+      width: 100%;
+      max-width: 300px;
+      margin-top: 10px;
+      display: block;
+    }
+    .pdf-link {
+      display: inline-block;
+      margin-top: 10px;
+      color: #2196F3;
+      text-decoration: none;
+    }
+    .pdf-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>不動産物件管理システム</h1>
+    
+    <div id="loading" class="loading" style="display: none;">
+      <div class="spinner"></div>
+    </div>
+    
+    <div id="message" style="display: none;"></div>
+    
+    <div class="tabs">
+      <button class="tab-button active" data-tab="register">物件登録</button>
+      <button class="tab-button" data-tab="list">一覧・検索</button>
+      <button class="tab-button" data-tab="csv">CSV管理</button>
+      <button class="tab-button" data-tab="settings">設定</button>
+    </div>
+    
+    <!-- 物件登録タブ -->
+    <div id="register" class="tab-content active">
+      <form id="propertyForm">
+        <div class="form-group">
+          <label>種別</label>
+          <select id="type">
+            <option>土地</option>
+            <option>中古戸建</option>
+            <option>新築戸建</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>物件名</label>
+          <input type="text" id="name">
+        </div>
+        <div class="form-group">
+          <label>行政区</label>
+          <select id="city">
+            <option>流山市</option>
+            <option>柏市</option>
+            <option>松戸市</option>
+            <option>船橋市</option>
+            <option>鎌ヶ谷市</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>番地以下</label>
+          <input type="text" id="address">
+        </div>
+        <div class="form-group">
+          <label>価格</label>
+          <input type="number" id="price">
+        </div>
+        <div class="form-group">
+          <label>土地面積</label>
+          <input type="number" id="landArea">
+        </div>
+        <div class="form-group">
+          <label>建物面積</label>
+          <input type="number" id="buildingArea">
+        </div>
+        <div class="form-group">
+          <label>媒体</label>
+          <select id="media">
+            <option>レインズ</option>
+            <option>at-home</option>
+            <option>スーモ</option>
+            <option>不動産ジャパン</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>業者名</label>
+          <input type="text" id="agency">
+        </div>
+        <div class="form-group">
+          <label>電話番号</label>
+          <input type="text" id="phone">
+        </div>
+        <div class="form-group">
+          <label>販売状況</label>
+          <select id="status">
+            <option>販売中</option>
+            <option>成約</option>
+            <option>売り止め</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>PDF資料</label>
+          <input type="file" id="pdfFile" accept=".pdf">
+          <div id="pdfPreviewContainer"></div>
+        </div>
+        <button type="button" id="registerBtn">登録</button>
+      </form>
+    </div>
+    
+    <!-- 一覧・検索タブ -->
+    <div id="list" class="tab-content">
+      <div class="search-form">
+        <select id="searchType">
+          <option value="">種別（すべて）</option>
+          <option>土地</option>
+          <option>中古戸建</option>
+          <option>新築戸建</option>
+        </select>
+        <select id="searchCity">
+          <option value="">行政区（すべて）</option>
+          <option>流山市</option>
+          <option>柏市</option>
+          <option>松戸市</option>
+          <option>船橋市</option>
+          <option>鎌ヶ谷市</option>
+        </select>
+        <input type="text" id="searchAddress" placeholder="番地以下">
+        <input type="number" id="searchMinPrice" placeholder="価格下限">
+        <input type="number" id="searchMaxPrice" placeholder="価格上限">
+        <select id="searchStatus">
+          <option value="">販売状況（すべて）</option>
+          <option>販売中</option>
+          <option>成約</option>
+          <option>売り止め</option>
+        </select>
+        <button id="searchBtn">検索</button>
+      </div>
+      
+      <div class="actions">
+        <button class="status-button" data-status="販売中">販売中に変更</button>
+        <button class="status-button" data-status="成約">成約に変更</button>
+        <button class="status-button" data-status="売り止め">売り止めに変更</button>
+        <button id="deleteBtn">削除</button>
+        <button id="exportSelectedBtn">選択物件をCSV出力</button>
+      </div>
+      
+      <div id="resultCount"></div>
+      
+      <table id="propertyTable">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAll"></th>
+            <th>種別</th>
+            <th>物件名</th>
+            <th>行政区</th>
+            <th>番地以下</th>
+            <th>価格</th>
+            <th>土地面積</th>
+            <th>建物面積</th>
+            <th>媒体</th>
+            <th>業者名</th>
+            <th>電話番号</th>
+            <th>販売状況</th>
+            <th>PDF</th>
+            <th>登録日</th>
+            <th>更新日</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- テーブル本体（検索結果がここに表示されます） -->
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- CSV管理タブ -->
+    <div id="csv" class="tab-content">
+      <div class="form-group">
+        <button id="exportAllBtn">全物件CSV出力</button>
+        <button id="exportOnSaleBtn">販売中物件CSV出力</button>
+        <button id="exportSoldBtn">成約物件CSV出力</button>
+        <button id="exportStoppedBtn">売り止め物件CSV出力</button>
+      </div>
+      <div class="form-group">
+        <button id="downloadTemplateBtn">CSVテンプレートダウンロード</button>
+      </div>
+      <div class="form-group">
+        <label>CSVファイル取込</label>
+        <input type="file" id="csvFile" accept=".csv">
+        <button id="importCsvBtn">CSV取込</button>
+      </div>
+    </div>
+    
+    <!-- 設定タブ -->
+    <div id="settings" class="tab-content">
+      <div class="form-group">
+        <label>JSONBin.io APIキー</label>
+        <input type="text" id="apiKey" placeholder="APIキーを入力してください">
+      </div>
+      <div class="form-group">
+        <label>Bin ID (空欄の場合は新規作成されます)</label>
+        <input type="text" id="binId" placeholder="既存のBin IDがあれば入力してください">
+      </div>
+      <div class="form-group">
+        <button id="saveSettingsBtn">設定を保存</button>
+        <button id="testConnectionBtn">接続テスト</button>
+        <button id="createNewBinBtn">新規Bin作成</button>
+        <button id="syncDataBtn">データ同期</button>
+      </div>
+      <div id="connectionStatus"></div>
+    </div>
+  </div>
+
+  <script>
+    // グローバル変数
+    let properties = [];
+    let filteredProperties = [];  // 明示的に配列として初期化
+    let isDataModified = false;
+    let searchExecuted = false;  // 検索が実行されたかを追跡するフラグ
+    
+    // JSONBin.io設定
+    const jsonBinConfig = {
+      apiKey: localStorage.getItem('jsonBinApiKey') || '',
+      binId: localStorage.getItem('jsonBinBinId') || '',
+      baseUrl: 'https://api.jsonbin.io/v3/b'
+    };
+    
+    // DOM要素
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const loading = document.getElementById('loading');
+    const message = document.getElementById('message');
+    
+    // タブ切り替え関数
+    function switchTab(tabId) {
+      // タブボタンのアクティブ状態を切り替え
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
+      
+      // タブコンテンツの表示を切り替え
+      tabContents.forEach(content => content.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      
+      // 設定タブが表示されたら設定値を読み込む
+      if (tabId === 'settings') {
+        loadSettings();
+      }
+      
+      // 一覧タブが表示されたら物件一覧を更新
+      if (tabId === 'list') {
+        // 一覧表示時は検索実行状態をリセット
+        searchExecuted = false;
+        loadProperties();
+      }
+    }
+    
+    // タブボタンにイベントリスナーを追加
+    tabButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const tabId = this.getAttribute('data-tab');
+        switchTab(tabId);
+      });
+    });
+    
+    // 検索ボタンのイベントリスナーを追加（タブ切替とは別に）
+    document.getElementById('searchBtn').addEventListener('click', function() {
+      // 検索実行フラグをtrueに設定
+      searchExecuted = true;
+      
+      // 検索条件を取得
+      const type = document.getElementById('searchType').value;
+      const city = document.getElementById('searchCity').value;
+      const address = document.getElementById('searchAddress').value.toLowerCase();
+      const minPrice = document.getElementById('searchMinPrice').value;
+      const maxPrice = document.getElementById('searchMaxPrice').value;
+      const status = document.getElementById('searchStatus').value;
+      
+      console.log('検索条件:', { type, city, address, minPrice, maxPrice, status });
+      
+      // フィルタリング処理
+      filteredProperties = properties.filter(property => {
+        // 各条件をチェック
+        const typeMatch = !type || property.type === type;
+        const cityMatch = !city || property.city === city;
+        const addressMatch = !address || (property.address && property.address.toLowerCase().includes(address));
+        const minPriceMatch = !minPrice || (property.price && parseInt(property.price) >= parseInt(minPrice));
+        const maxPriceMatch = !maxPrice || (property.price && parseInt(property.price) <= parseInt(maxPrice));
+        const statusMatch = !status || property.status === status;
+        
+        // デバッグ出力
+        console.log(`物件:「${property.name}」, 場所:${property.city}`);
+        console.log(`  city条件:「${city}」, 一致:${cityMatch}`);
+        
+        // すべての条件に一致する場合のみtrue
+        const allMatch = typeMatch && cityMatch && addressMatch && minPriceMatch && maxPriceMatch && statusMatch;
+        console.log(`  結果:${allMatch ? '一致' : '不一致'}`);
+        return allMatch;
+      });
+      
+      console.log(`検索結果: ${filteredProperties.length}件が見つかりました`);
+      
+      // 検索結果を表示
+      renderPropertyTable();
+    });
+    
+    // ローディング表示/非表示
+    function showLoading() {
+      loading.style.display = 'flex';
+    }
+    
+    function hideLoading() {
+      loading.style.display = 'none';
+    }
+    
+    // メッセージ表示
+    function showMessage(text, isError = false) {
+      message.textContent = text;
+      message.className = isError ? 'error' : 'success';
+      message.style.display = 'block';
+      
+      setTimeout(() => {
+        message.style.display = 'none';
+      }, 5000);
+    }
+    
+    // PDFファイル選択時のプレビュー
+    document.getElementById('pdfFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) {
+        document.getElementById('pdfPreviewContainer').innerHTML = '';
+        return;
+      }
+      
+      if (file.type !== 'application/pdf') {
+        showMessage('PDFファイルを選択してください', true);
+        e.target.value = '';
+        document.getElementById('pdfPreviewContainer').innerHTML = '';
+        return;
+      }
+      
+      // PDFプレビュー（アイコンとファイル名）
+      const previewHtml = `
+        <div style="margin-top: 10px;">
+          <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWZpbGUtdHlwZS1wZGYiPjxwYXRoIGQ9Ik0xNCA4djUuNUExLjUgMS41IDAgMCAxIDEyLjUgMTVIMTVsNC00YzEtMS01LTE1LTUtMTVTMiA1IDIgMTZjLjUgMi41IDIgNCAxLjUgNyAxLjIgMS00IDMtNCAxaC0uMkEyIDIgMCAwIDEgMCAyMi4xYTIuMiAyLjIgMCAwIDEgMi03LjljLjQgMi43IDIuMSA5LjkgNS41IDMuOSAwIDAgMSAyIDUgMi41UzIyLjVgIi8+PHBhdGggZD0iTTEzLjUgMmMuMiAxLjYuOSA0LjIgMiAzIDEuMy0xLjMuNS0zLjQtMi0zeiIvPjxwYXRoIGQ9Ik0xMyAxNXYzYTEuOCAxLjggMCAwIDEtMiAyYy00IDAtNS4zLTcuMy0xLTEwLjUiLz48cGF0aCBkPSJNMTQgMTVoMmE3LjI0IDcuMjQgMCAwIDAgMy44LTEuMWwtLjgtM2MtLjQtMS44IDAtMi4zIDEtMy45Ii8+PC9zdmc+" style="width: 24px; height: 24px; margin-right: 10px; vertical-align: middle;">
+          <span>${file.name}</span> (${(file.size / 1024).toFixed(2)} KB)
+        </div>
+      `;
+      document.getElementById('pdfPreviewContainer').innerHTML = previewHtml;
+    });
+    
+    // 日付フォーマット
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    }
+    
+    // 設定の読み込み
+    function loadSettings() {
+      document.getElementById('apiKey').value = jsonBinConfig.apiKey;
+      document.getElementById('binId').value = jsonBinConfig.binId;
+    }
+    
+    // 設定の保存
+    document.getElementById('saveSettingsBtn').onclick = function() {
+      const apiKey = document.getElementById('apiKey').value.trim();
+      const binId = document.getElementById('binId').value.trim();
+      
+      jsonBinConfig.apiKey = apiKey;
+      jsonBinConfig.binId = binId;
+      
+      localStorage.setItem('jsonBinApiKey', apiKey);
+      localStorage.setItem('jsonBinBinId', binId);
+      
+      showMessage('設定を保存しました');
+    };
+    
+    // 接続テスト
+    document.getElementById('testConnectionBtn').onclick = async function() {
+      const statusElement = document.getElementById('connectionStatus');
+      statusElement.textContent = '接続テスト中...';
+      statusElement.style.color = '#333';
+      
+      if (!jsonBinConfig.apiKey) {
+        statusElement.textContent = 'APIキーが設定されていません';
+        statusElement.style.color = 'red';
+        return;
+      }
+      
+      if (!jsonBinConfig.binId) {
+        statusElement.textContent = 'Bin IDが設定されていません。新規作成するか、既存のBin IDを入力してください';
+        statusElement.style.color = 'orange';
+        return;
+      }
+      
+      try {
+        showLoading();
+        const response = await fetch(`${jsonBinConfig.baseUrl}/${jsonBinConfig.binId}`, {
+          method: 'GET',
+          headers: {
+            'X-Master-Key': jsonBinConfig.apiKey
+          }
+        });
+        
+        if (response.ok) {
+          statusElement.textContent = '接続成功！データを読み込めます';
+          statusElement.style.color = 'green';
+        } else {
+          statusElement.textContent = `接続エラー: ${response.status} ${response.statusText}`;
+          statusElement.style.color = 'red';
+        }
+      } catch (error) {
+        statusElement.textContent = `接続エラー: ${error.message}`;
+        statusElement.style.color = 'red';
+      } finally {
+        hideLoading();
+      }
+    };
+    
+    // 新規Bin作成
+    document.getElementById('createNewBinBtn').onclick = async function() {
+      const statusElement = document.getElementById('connectionStatus');
+      
+      if (!jsonBinConfig.apiKey) {
+        statusElement.textContent = 'APIキーが設定されていません';
+        statusElement.style.color = 'red';
+        return;
+      }
+      
+      try {
+        showLoading();
+        const initialData = { properties: [] };
+        
+        const response = await fetch(`${jsonBinConfig.baseUrl}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': jsonBinConfig.apiKey,
+            'X-Bin-Private': 'false'
+          },
+          body: JSON.stringify(initialData)
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const newBinId = data.metadata.id;
+          
+          jsonBinConfig.binId = newBinId;
+          document.getElementById('binId').value = newBinId;
+          localStorage.setItem('jsonBinBinId', newBinId);
+          
+          statusElement.textContent = `新規Binを作成しました。Bin ID: ${newBinId}`;
+          statusElement.style.color = 'green';
+          
+          showMessage(`新規Binを作成しました。このIDを他の端末でも使用することで、データを共有できます。Bin ID: ${newBinId}`);
+        } else {
+          statusElement.textContent = `Bin作成エラー: ${response.status} ${response.statusText}`;
+          statusElement.style.color = 'red';
+        }
+      } catch (error) {
+        statusElement.textContent = `Bin作成エラー: ${error.message}`;
+        statusElement.style.color = 'red';
+      } finally {
+        hideLoading();
+      }
+    };
+    
+    // データ同期
+    document.getElementById('syncDataBtn').onclick = async function() {
+      if (isDataModified) {
+        if (confirm('ローカルのデータが変更されています。JSONBin.ioに保存しますか？')) {
+          await savePropertiesToJSONBin();
+        }
+      } else {
+        if (confirm('JSONBin.ioからデータを読み込みますか？現在のデータは上書きされます。')) {
+          await loadPropertiesFromJSONBin();
+          showMessage('データを同期しました');
+          renderPropertyTable();
+        }
+      }
+    };
+    
+    // JSONBin.ioからデータを取得
+    async function loadPropertiesFromJSONBin() {
+      if (!jsonBinConfig.apiKey || !jsonBinConfig.binId) {
+        showMessage('APIキーとBin IDを設定してください', true);
+        return null;
+      }
+      
+      try {
+        showLoading();
+        const response = await fetch(`${jsonBinConfig.baseUrl}/${jsonBinConfig.binId}`, {
+          method: 'GET',
+          headers: {
+            'X-Master-Key': jsonBinConfig.apiKey
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`JSONBin.ioからの読み込みに失敗しました: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        properties = data.record.properties || [];
+        
+        // ローカルストレージにも保存
+        localStorage.setItem('properties', JSON.stringify(properties));
+        isDataModified = false;
+        
+        return properties;
+      } catch (error) {
+        showMessage(`データ読み込みエラー: ${error.message}`, true);
+        console.error('JSONBin.io読み込みエラー:', error);
+        return null;
+      } finally {
+        hideLoading();
+      }
+    }
+    
+    // JSONBin.ioにデータを保存
+    async function savePropertiesToJSONBin() {
+      if (!jsonBinConfig.apiKey || !jsonBinConfig.binId) {
+        showMessage('APIキーとBin IDを設定してください', true);
+        return false;
+      }
+      
+      try {
+        showLoading();
+        const dataToSave = { properties: properties };
+        
+        const response = await fetch(`${jsonBinConfig.baseUrl}/${jsonBinConfig.binId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': jsonBinConfig.apiKey
+          },
+          body: JSON.stringify(dataToSave)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`JSONBin.ioへの保存に失敗しました: ${response.status} ${response.statusText}`);
+        }
+        
+        isDataModified = false;
+        return true;
+      } catch (error) {
+        showMessage(`データ保存エラー: ${error.message}`, true);
+        console.error('JSONBin.io保存エラー:', error);
+        return false;
+      } finally {
+        hideLoading();
+      }
+    }
+    
+    // PDFファイルをBase64に変換
+    function getBase64FromFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
+    
+    // 物件登録
+    document.getElementById('registerBtn').onclick = async function() {
+      const type = document.getElementById('type').value;
+      const name = document.getElementById('name').value;
+      const city = document.getElementById('city').value;
+      const address = document.getElementById('address').value;
+      const price = document.getElementById('price').value;
+      const landArea = document.getElementById('landArea').value;
+      const buildingArea = document.getElementById('buildingArea').value;
+      const media = document.getElementById('media').value;
+      const agency = document.getElementById('agency').value;
+      const phone = document.getElementById('phone').value;
+      const status = document.getElementById('status').value;
+      const pdfFile = document.getElementById('pdfFile').files[0];
+      
+      if (!name || !city) {
+        showMessage('物件名と行政区は必須です', true);
+        return;
+      }
+      
+      try {
+        showLoading();
+        
+        // PDFファイルの処理
+        let pdfData = null;
+        if (pdfFile) {
+          try {
+            pdfData = await getBase64FromFile(pdfFile);
+          } catch (error) {
+            console.error('PDFファイル変換エラー:', error);
+            showMessage('PDFファイルの処理中にエラーが発生しました', true);
+            hideLoading();
+            return;
+          }
+        }
+        
+        // 新しい物件オブジェクトを作成
+        const now = new Date().toISOString();
+        const newProperty = {
+          type,
+          name,
+          city,
+          address,
+          price,
+          landArea,
+          buildingArea,
+          media,
+          agency,
+          phone,
+          status,
+          pdf: pdfData ? {
+            name: pdfFile.name,
+            size: pdfFile.size,
+            type: pdfFile.type,
+            data: pdfData
+          } : null,
+          createdAt: now,
+          updatedAt: now
+        };
+        
+        // 物件をローカルに追加
+        properties.push(newProperty);
+        localStorage.setItem('properties', JSON.stringify(properties));
+        isDataModified = true;
+        
+        // フォームをリセット
+        document.getElementById('propertyForm').reset();
+        document.getElementById('pdfPreviewContainer').innerHTML = '';
+        
+        // JSONBin.ioにも保存（設定されている場合）
+        let jsonBinSaved = false;
+        if (jsonBinConfig.apiKey && jsonBinConfig.binId) {
+          jsonBinSaved = await savePropertiesToJSONBin();
+        }
+        
+        if (jsonBinSaved) {
+          showMessage('物件を登録しました（ローカルのみ保存）');
+        }
+      } catch (error) {
+        console.error('物件登録エラー:', error);
+        showMessage('物件登録中にエラーが発生しました', true);
+      } finally {
+        hideLoading();
+      }
+    };
+    
+    // 物件データの読み込み
+    function loadProperties() {
+      // まずローカルストレージから読み込む
+      const storedProperties = localStorage.getItem('properties');
+      properties = storedProperties ? JSON.parse(storedProperties) : [];
+      
+      // JSONBin.ioが設定されていれば、そこからも読み込む
+      if (jsonBinConfig.apiKey && jsonBinConfig.binId && properties.length === 0) {
+        loadPropertiesFromJSONBin().then(data => {
+          if (data) {
+            renderPropertyTable();
+          }
+        });
+      } else {
+        renderPropertyTable();
+      }
+    }
+    
+    // 物件一覧の表示
+    function renderPropertyTable() {
+      const tbody = document.querySelector('#propertyTable tbody');
+      tbody.innerHTML = '';
+      
+      // 表示する物件リストを決定
+      // 検索が実行された場合はフィルタリング結果を表示（たとえ0件でも）
+      // 検索実行前は全物件を表示
+      let displayProperties = searchExecuted ? filteredProperties : properties;
+      
+      // デバッグ出力
+      console.log('検索実行済み:', searchExecuted);
+      console.log('表示物件数:', displayProperties.length);
+      console.log('全物件数:', properties.length);
+      console.log('フィルター後物件数:', filteredProperties.length);
+      console.log('表示対象:', displayProperties);
+      
+      // 結果件数を表示
+      document.getElementById('resultCount').textContent = `${displayProperties.length}件の物件が見つかりました`;
+      
+      displayProperties.forEach((property, index) => {
+        const row = document.createElement('tr');
+        
+        // チェックボックス
+        const checkboxCell = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.setAttribute('data-index', index);
+        checkboxCell.appendChild(checkbox);
+        row.appendChild(checkboxCell);
+        
+        // 基本情報
+        [
+          property.type, 
+          property.name, 
+          property.city, 
+          property.address, 
+          property.price, 
+          property.landArea, 
+          property.buildingArea, 
+          property.media, 
+          property.agency, 
+          property.phone, 
+          property.status
+        ].forEach(value => {
+          const cell = document.createElement('td');
+          cell.textContent = value || '';
+          row.appendChild(cell);
+        });
+        
+        // PDFリンク
+        const pdfCell = document.createElement('td');
+        if (property.pdf && property.pdf.data) {
+          const link = document.createElement('a');
+          link.textContent = property.pdf.name;
+          link.className = 'pdf-link';
+          link.setAttribute('href', property.pdf.data);
+          link.setAttribute('target', '_blank');
+          link.setAttribute('download', property.pdf.name);
+          pdfCell.appendChild(link);
+        }
+        row.appendChild(pdfCell);
+        
+        // 登録日・更新日
+        [formatDate(property.createdAt), formatDate(property.updatedAt)].forEach(value => {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.appendChild(cell);
+        });
+        
+        tbody.appendChild(row);
+      });
+    }
+    
+    // 物件検索（この関数は削除、上部で再定義済み）
+    
+    // すべて選択/解除
+    document.getElementById('selectAll').onclick = function() {
+      const checkboxes = document.querySelectorAll('#propertyTable tbody input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+    };
+    
+    // 販売状況変更ボタン
+    document.querySelectorAll('.status-button').forEach(button => {
+      button.onclick = async function() {
+        const newStatus = this.getAttribute('data-status');
+        const checkboxes = document.querySelectorAll('#propertyTable tbody input[type="checkbox"]:checked');
+        
+        if (checkboxes.length === 0) {
+          showMessage('物件が選択されていません', true);
+          return;
+        }
+        
+        // 選択された物件の状態を変更
+        checkboxes.forEach(checkbox => {
+          const index = parseInt(checkbox.getAttribute('data-index'));
+          const collection = filteredProperties.length > 0 ? filteredProperties : properties;
+          
+          if (collection[index]) {
+            collection[index].status = newStatus;
+            collection[index].updatedAt = new Date().toISOString();
+            
+            // 元のpropertiesも更新（filteredPropertiesを使用している場合）
+            if (filteredProperties.length > 0) {
+              const originalIndex = properties.findIndex(p => 
+                p.name === collection[index].name && 
+                p.city === collection[index].city && 
+                p.address === collection[index].address
+              );
+              
+              if (originalIndex !== -1) {
+                properties[originalIndex].status = newStatus;
+                properties[originalIndex].updatedAt = collection[index].updatedAt;
+              }
+            }
+          }
+        });
+        
+        // 更新したデータを保存
+        localStorage.setItem('properties', JSON.stringify(properties));
+        isDataModified = true;
+        
+        // JSONBin.ioにも保存（設定されている場合）
+        let jsonBinSaved = false;
+        if (jsonBinConfig.apiKey && jsonBinConfig.binId) {
+          jsonBinSaved = await savePropertiesToJSONBin();
+        }
+        
+        // テーブルを再描画
+        renderPropertyTable();
+        
+        if (jsonBinSaved) {
+          showMessage(`${checkboxes.length}件の物件を「${newStatus}」に更新しました（JSONBin.ioにも保存されました）`);
+        } else if (jsonBinConfig.apiKey && jsonBinConfig.binId) {
+          showMessage(`${checkboxes.length}件の物件を「${newStatus}」に更新しましたが、JSONBin.ioへの保存に失敗しました`);
+        } else {
+          showMessage(`${checkboxes.length}件の物件を「${newStatus}」に更新しました（ローカルのみ保存）`);
+        }
+      };
+    });
+    
+    // 削除ボタン
+    document.getElementById('deleteBtn').onclick = async function() {
+      const checkboxes = document.querySelectorAll('#propertyTable tbody input[type="checkbox"]:checked');
+      
+      if (checkboxes.length === 0) {
+        showMessage('物件が選択されていません', true);
+        return;
+      }
+      
+      if (!confirm(`選択した${checkboxes.length}件の物件を削除しますか？`)) {
+        return;
+      }
+      
+      // 選択された物件のインデックスを収集（降順にソート）
+      const indexes = Array.from(checkboxes).map(checkbox => 
+        parseInt(checkbox.getAttribute('data-index'))
+      ).sort((a, b) => b - a); // 降順にソート
+      
+      // インデックスを使用して物件を削除（大きいインデックスから削除）
+      if (filteredProperties.length > 0) {
+        // フィルタリング結果から削除
+        const propertiesToRemove = indexes.map(index => filteredProperties[index]);
+        
+        // オリジナルデータからも削除
+        propertiesToRemove.forEach(propertyToRemove => {
+          const originalIndex = properties.findIndex(p => 
+            p.name === propertyToRemove.name && 
+            p.city === propertyToRemove.city && 
+            p.address === propertyToRemove.address
+          );
+          
+          if (originalIndex !== -1) {
+            properties.splice(originalIndex, 1);
+          }
+        });
+        
+        // フィルタリング結果からも削除
+        indexes.forEach(index => {
+          filteredProperties.splice(index, 1);
+        });
+      } else {
+        // 通常のリストから削除
+        indexes.forEach(index => {
+          properties.splice(index, 1);
+        });
+      }
+      
+      // 更新したデータを保存
+      localStorage.setItem('properties', JSON.stringify(properties));
+      isDataModified = true;
+      
+      // JSONBin.ioにも保存（設定されている場合）
+      let jsonBinSaved = false;
+      if (jsonBinConfig.apiKey && jsonBinConfig.binId) {
+        jsonBinSaved = await savePropertiesToJSONBin();
+      }
+      
+      // テーブルを再描画
+      renderPropertyTable();
+      
+      if (jsonBinSaved) {
+        showMessage(`${checkboxes.length}件の物件を削除しました（JSONBin.ioにも反映されました）`);
+      } else if (jsonBinConfig.apiKey && jsonBinConfig.binId) {
+        showMessage(`${checkboxes.length}件の物件を削除しましたが、JSONBin.ioへの保存に失敗しました`);
+      } else {
+        showMessage(`${checkboxes.length}件の物件を削除しました（ローカルのみ反映）`);
+      }
+    };
+    
+    // 選択物件のCSV出力
+    document.getElementById('exportSelectedBtn').onclick = function() {
+      const checkboxes = document.querySelectorAll('#propertyTable tbody input[type="checkbox"]:checked');
+      
+      if (checkboxes.length === 0) {
+        showMessage('物件が選択されていません', true);
+        return;
+      }
+      
+      // 選択された物件を収集
+      const selectedProperties = Array.from(checkboxes).map(checkbox => {
+        const index = parseInt(checkbox.getAttribute('data-index'));
+        return filteredProperties.length > 0 ? filteredProperties[index] : properties[index];
+      });
+      
+      exportPropertiesToCSV(selectedProperties, '選択物件');
+    };
+    
+    // 全物件CSV出力
+    document.getElementById('exportAllBtn').onclick = function() {
+      if (properties.length === 0) {
+        showMessage('物件が登録されていません', true);
+        return;
+      }
+      
+      exportPropertiesToCSV(properties, '全物件');
+    };
+    
+    // 販売中物件CSV出力
+    document.getElementById('exportOnSaleBtn').onclick = function() {
+      const onSaleProperties = properties.filter(property => property.status === '販売中');
+      
+      if (onSaleProperties.length === 0) {
+        showMessage('販売中の物件がありません', true);
+        return;
+      }
+      
+      exportPropertiesToCSV(onSaleProperties, '販売中物件');
+    };
+    
+    // 成約物件CSV出力
+    document.getElementById('exportSoldBtn').onclick = function() {
+      const soldProperties = properties.filter(property => property.status === '成約');
+      
+      if (soldProperties.length === 0) {
+        showMessage('成約済みの物件がありません', true);
+        return;
+      }
+      
+      exportPropertiesToCSV(soldProperties, '成約物件');
+    };
+    
+    // 売り止め物件CSV出力
+    document.getElementById('exportStoppedBtn').onclick = function() {
+      const stoppedProperties = properties.filter(property => property.status === '売り止め');
+      
+      if (stoppedProperties.length === 0) {
+        showMessage('売り止めの物件がありません', true);
+        return;
+      }
+      
+      exportPropertiesToCSV(stoppedProperties, '売り止め物件');
+    };
+    
+    // CSVテンプレートダウンロード
+    document.getElementById('downloadTemplateBtn').onclick = function() {
+      const headers = ['種別', '物件名', '行政区', '番地以下', '価格', '土地面積', '建物面積', '媒体', '業者名', '電話番号', '販売状況'];
+      const example = ['土地', 'サンプル住宅地', '流山市', '中央1-2-3', '3000', '120', '90', 'レインズ', 'サンプル不動産', '0120-000-000', '販売中'];
+      
+      const csvContent = [
+        headers.join(','),
+        example.join(',')
+      ].join('\n');
+      
+      downloadCSV(csvContent, 'csv_template');
+    };
+    
+    // CSV取込ボタン
+    document.getElementById('importCsvBtn').onclick = async function() {
+      const fileInput = document.getElementById('csvFile');
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        showMessage('ファイルが選択されていません', true);
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      
+      reader.onload = async function(e) {
+        try {
+          showLoading();
+          const csvContent = e.target.result;
+          const lines = csvContent.split('\n');
+          
+          if (lines.length < 2) {
+            showMessage('CSVファイルに有効なデータがありません', true);
+            hideLoading();
+            return;
+          }
+          
+          const headers = lines[0].split(',');
+          const headerMap = {
+            '種別': 'type',
+            '物件名': 'name',
+            '行政区': 'city',
+            '番地以下': 'address',
+            '価格': 'price',
+            '土地面積': 'landArea',
+            '建物面積': 'buildingArea',
+            '媒体': 'media',
+            '業者名': 'agency',
+            '電話番号': 'phone',
+            '販売状況': 'status'
+          };
+          
+          const newProperties = [];
+          const now = new Date().toISOString();
+          
+          for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const values = line.split(',');
+            const property = {};
+            
+            headers.forEach((header, index) => {
+              const key = headerMap[header.trim()] || header.trim();
+              property[key] = values[index] ? values[index].trim() : '';
+            });
+            
+            // 必須フィールド
+            if (!property.name || !property.city) continue;
+            
+            property.createdAt = now;
+            property.updatedAt = now;
+            
+            newProperties.push(property);
+          }
+          
+          if (newProperties.length === 0) {
+            showMessage('取り込み可能な物件データがありませんでした', true);
+            hideLoading();
+            return;
+          }
+          
+          // 既存のデータと結合
+          properties = properties.concat(newProperties);
+          localStorage.setItem('properties', JSON.stringify(properties));
+          isDataModified = true;
+          
+          // JSONBin.ioにも保存（設定されている場合）
+          let jsonBinSaved = false;
+          if (jsonBinConfig.apiKey && jsonBinConfig.binId) {
+            jsonBinSaved = await savePropertiesToJSONBin();
+          }
+          
+          // フォームをリセット
+          fileInput.value = '';
+          
+          if (jsonBinSaved) {
+            showMessage(`${newProperties.length}件の物件を取り込みました（JSONBin.ioにも保存されました）`);
+          } else if (jsonBinConfig.apiKey && jsonBinConfig.binId) {
+            showMessage(`${newProperties.length}件の物件を取り込みましたが、JSONBin.ioへの保存に失敗しました`);
+          } else {
+            showMessage(`${newProperties.length}件の物件を取り込みました（ローカルのみ保存）`);
+          }
+          
+          // 一覧表示が開いていれば更新
+          if (document.getElementById('list').classList.contains('active')) {
+            renderPropertyTable();
+          }
+        } catch (error) {
+          showMessage(`CSV取込みエラー: ${error.message}`, true);
+          console.error('CSV取込みエラー:', error);
+        } finally {
+          hideLoading();
+        }
+      };
+      
+      reader.readAsText(file);
+    };
+    
+    // CSV出力
+    function exportPropertiesToCSV(propertiesList, filePrefix) {
+      const headers = ['種別', '物件名', '行政区', '番地以下', '価格', '土地面積', '建物面積', '媒体', '業者名', '電話番号', '販売状況', '登録日', '更新日'];
+      
+      const rows = [
+        headers.join(',')
+      ];
+      
+      propertiesList.forEach(property => {
+        const row = [
+          property.type || '',
+          property.name || '',
+          property.city || '',
+          property.address || '',
+          property.price || '',
+          property.landArea || '',
+          property.buildingArea || '',
+          property.media || '',
+          property.agency || '',
+          property.phone || '',
+          property.status || '',
+          formatDate(property.createdAt),
+          formatDate(property.updatedAt)
+        ].map(value => {
+          // カンマや改行を含む場合はダブルクォートで囲む
+          if (typeof value === 'string' && (value.includes(',') || value.includes('\n') || value.includes('"'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        });
+        
+        rows.push(row.join(','));
+      });
+      
+      const csvContent = rows.join('\n');
+      downloadCSV(csvContent, filePrefix);
+      
+      showMessage(`${propertiesList.length}件の物件をCSV出力しました`);
+    }
+    
+    // CSVダウンロード
+    function downloadCSV(csvContent, filePrefix) {
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
+      const link = document.createElement('a');
+      
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${filePrefix}_${dateStr}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    // 自動保存機能の設定（編集が多発してもJSONBin.ioへのリクエストが多すぎないようにする）
+    let autoSaveTimeout = null;
+    
+    function scheduleAutoSave() {
+      // すでにタイマーが設定されていれば一旦キャンセル
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+      }
+      
+      // 5秒後に保存を実行（バッチ処理）
+      autoSaveTimeout = setTimeout(async () => {
+        if (isDataModified && jsonBinConfig.apiKey && jsonBinConfig.binId) {
+          try {
+            // 保存を実行
+            await savePropertiesToJSONBin();
+            console.log('自動保存しました');
+            isDataModified = false;
+          } catch (error) {
+            console.error('自動保存エラー:', error);
+          }
+        }
+      }, 5000);
+    }
+    
+    // 初期化処理
+    loadSettings();
+    loadProperties();
+    
+    // JSONBin.ioの設定が存在していれば、起動時にデータを同期（バックグラウンドで実行）
+    if (jsonBinConfig.apiKey && jsonBinConfig.binId) {
+      setTimeout(async () => {
+        try {
+          await loadPropertiesFromJSONBin();
+          console.log('JSONBin.ioからデータを読み込みました');
+          renderPropertyTable();
+        } catch (error) {
+          console.error('初期データ読み込みエラー:', error);
+        }
+      }, 1000);
+    }
+  </script>
+  <!-- HTMLファイルの終わり -->
+</body>
+</html>
